@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DiffEq Solver — Differential Equation Calculator</title>
+  <meta name="description" content="Instantly solve ordinary differential equations symbolically and numerically. Interactive graphs, phase portraits, slope fields, and parameter exploration." />
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+
+  <!-- Plotly -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+
+  <!-- math.js -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@13.2.0/lib/browser/math.min.js"></script>
+  
+  <!-- Algebrite (Computer Algebra System) -->
+  <script src="https://cdn.jsdelivr.net/npm/algebrite@1.4.0/dist/algebrite.min.js"></script>
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ═══════ HEADER ═══════ -->
+  <header class="app-header" id="app-header">
+    <div class="app-header__logo">
+      <div class="app-header__icon">∂</div>
+      <div>
+        <div class="app-header__title">DiffEq Solver</div>
+        <div class="app-header__subtitle">Differential Equation Calculator</div>
+      </div>
+    </div>
+    <div class="app-header__actions">
+      <button class="btn btn-ghost btn-icon" id="btn-help" title="Help &amp; Examples" aria-label="Help">?</button>
+    </div>
+  </header>
+
+  <!-- ═══════ MAIN ═══════ -->
+  <main class="app-main" id="app-main">
+
+    <!-- ─── Left Panel ─── -->
+    <div class="left-panel" id="left-panel">
+
+      <!-- Equation Type Selector -->
+      <div class="glass-card" id="card-input">
+        <div class="section-title">
+          <span class="section-title__icon">📐</span> Equation Input
+        </div>
+
+        <!-- Mode tabs -->
+        <div class="eq-type-tabs" id="eq-type-tabs">
+          <button class="eq-type-tab active" data-mode="single">Single ODE</button>
+          <button class="eq-type-tab" data-mode="system">System</button>
+        </div>
+
+        <!-- Single ODE input -->
+        <div id="input-single">
+          <div class="input-group">
+            <label for="eq-input">Enter your equation</label>
+            <input type="text" class="eq-input" id="eq-input"
+              placeholder="e.g. y'' + 3y' + 2y = 0" autocomplete="off" spellcheck="false" />
+            <div class="katex-preview" id="katex-preview"></div>
+          </div>
+        </div>
+
+        <!-- System input (hidden by default) -->
+        <div id="input-system" style="display: none;">
+          <div id="system-equations">
+            <div class="system-eq-row">
+              <span class="system-eq-label">dx/dt =</span>
+              <input type="text" class="eq-input" data-var="x"
+                placeholder="e.g. a*x - b*x*y" autocomplete="off" spellcheck="false" />
+            </div>
+            <div class="system-eq-row">
+              <span class="system-eq-label">dy/dt =</span>
+              <input type="text" class="eq-input" data-var="y"
+                placeholder="e.g. d*x*y - g*y" autocomplete="off" spellcheck="false" />
+            </div>
+          </div>
+          <button class="btn btn-ghost" id="btn-add-eq" style="margin-top: 8px; font-size: 0.75rem;">+ Add equation</button>
+        </div>
+
+        <!-- Preset selector -->
+        <div class="input-group" style="margin-top: var(--space-md);">
+          <label for="preset-select">Presets</label>
+          <div class="select-wrapper">
+            <select class="select-input" id="preset-select">
+              <option value="">— Choose a preset —</option>
+              <optgroup label="First Order">
+                <option value="exponential">Exponential Growth: dy/dx = k*y</option>
+                <option value="logistic">Logistic Growth: dy/dx = r*y*(1 - y/K)</option>
+                <option value="linear1">Linear 1st-order: dy/dx + 2y = x</option>
+              </optgroup>
+              <optgroup label="Second Order">
+                <option value="sho">Simple Harmonic Oscillator: y'' + ω²y = 0</option>
+                <option value="damped">Damped Oscillator: y'' + 2ζωy' + ω²y = 0</option>
+                <option value="forced">Forced Oscillation: y'' + 2y' + 5y = cos(t)</option>
+              </optgroup>
+              <optgroup label="Systems (2D-3D)">
+                <option value="lotka-volterra">Lotka-Volterra (Predator-Prey)</option>
+                <option value="vanderpol">Van der Pol Oscillator</option>
+                <option value="lorenz">Lorenz Attractor (3D)</option>
+                <option value="rossler">Rössler Attractor (3D)</option>
+                <option value="sir-model">SIR Disease Model (3D)</option>
+              </optgroup>
+              <optgroup label="Higher Dimensions (4D+)">
+                <option value="hyperchaotic-chen">Hyperchaotic Chen Attractor (4D)</option>
+                <option value="coupled-oscillators">Coupled Oscillators (4D)</option>
+                <option value="double-pendulum">Double Pendulum (4D)</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <!-- Solve button -->
+        <button class="btn btn-primary btn-solve" id="btn-solve">
+          ⚡ Solve Equation
+        </button>
+      </div>
+
+      <!-- Initial Conditions -->
+      <div class="glass-card" id="card-ic">
+        <div class="section-title">
+          <span class="section-title__icon">🎯</span> Initial Conditions & Range
+        </div>
+        <div class="ic-grid" id="ic-grid">
+          <div class="input-group">
+            <label for="ic-x0">x₀ (start)</label>
+            <input type="number" class="text-input" id="ic-x0" value="0" step="0.1" />
+          </div>
+          <div class="input-group">
+            <label for="ic-y0">y(x₀)</label>
+            <input type="number" class="text-input" id="ic-y0" value="1" step="0.1" />
+          </div>
+          <div class="input-group">
+            <label for="ic-dy0">y'(x₀) <span style="color: var(--text-muted); font-size: 0.7rem;">(2nd order)</span></label>
+            <input type="number" class="text-input" id="ic-dy0" value="0" step="0.1" />
+          </div>
+          <div class="input-group">
+            <label for="ic-xend">x_end</label>
+            <input type="number" class="text-input" id="ic-xend" value="10" step="1" />
+          </div>
+        </div>
+        <div class="input-group" style="margin-top: var(--space-sm);">
+          <label for="ic-step">Step size (h)</label>
+          <input type="number" class="text-input" id="ic-step" value="0.01" step="0.001" min="0.0001" />
+        </div>
+      </div>
+
+      <!-- Constants Panel -->
+      <div class="glass-card" id="card-constants">
+        <div class="section-title">
+          <span class="section-title__icon">🔧</span> Constants & Parameters
+        </div>
+        <div class="constants-list" id="constants-list">
+          <!-- Dynamically populated -->
+        </div>
+        <div class="add-constant-row" id="add-constant-row">
+          <input type="text" class="text-input" id="new-const-name" placeholder="Name (e.g. k)" maxlength="6" />
+          <input type="number" class="text-input" id="new-const-value" placeholder="Value" value="1" step="0.1" />
+          <button class="btn btn-secondary" id="btn-add-const">+ Add</button>
+        </div>
+      </div>
+
+    </div><!-- /left-panel -->
+
+    <!-- ─── Right Panel ─── -->
+    <div class="right-panel" id="right-panel">
+
+      <!-- Graph Card -->
+      <div class="glass-card graph-container" id="card-graph">
+        <div class="section-title">
+          <span class="section-title__icon">📈</span> Visualization
+        </div>
+        <div class="graph-tabs" id="graph-tabs">
+          <button class="graph-tab active" data-graph="solution">Solution</button>
+          <button class="graph-tab" data-graph="slope">Slope Field</button>
+          <button class="graph-tab" data-graph="phase">Phase Portrait</button>
+          <button class="graph-tab" data-graph="projections">Projections</button>
+        </div>
+        <div id="plot-area">
+          <div class="graph-placeholder" id="graph-placeholder">
+            <div class="graph-placeholder__icon">📊</div>
+            <div>Enter an equation and hit <strong>Solve</strong> to see the graph</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Solution Card -->
+      <div class="glass-card solution-panel" id="card-solution" style="display: none;">
+        <div class="section-title">
+          <span class="section-title__icon">✨</span> Solution
+        </div>
+        <div id="solution-type-badge"></div>
+        <div class="solution-steps" id="solution-steps">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+    </div><!-- /right-panel -->
+
+  </main>
+
+  <!-- ═══════ APP JS ═══════ -->
+  <script src="app.js"></script>
+
+</body>
+</html>
